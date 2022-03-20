@@ -78,17 +78,19 @@ const Billing = () => {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
 
   const [invoices, setInvoices] = useState([]);
-
+  const [billingStats, setBillingStats] = useState({});
   const [formData, setFormData] = useState({
-    appointmentDate: "2-2-2022",
+    appointmentDate: new Date(),
     consultationCharges: 0,
   });
+
+  // Filter Invoices
+  const [invoiceDate, setInvoiceDate] = useState(new Date());
 
   // Invoice View Mechanism
   const [openViewModal, setOpenViewModal] = useState(false);
   const [medicinesList, setMedicinesList] = useState([]);
   const [customerData, setCustomerData] = useState([]);
-
   const [invoiceData, setInvoiceData] = useState({});
 
   const chartOptions = {
@@ -164,14 +166,24 @@ const Billing = () => {
             toast(msg);
           })
           .catch((error) => {
-            console.log(error.response);
+            const data = error.response.data;
+
+            if (data) {
+              if (data.msg) {
+                toast.error(data.msg);
+              }
+            }
           });
       }
     }
   };
 
   const getInvoices = () => {
-    getCall(BASE_URL + "api/doctors_m/get-invoices/")
+    getCall(BASE_URL + "api/doctors_m/get-invoices/", {
+      params: {
+        date: invoiceDate,
+      },
+    })
       .then((resp) => {
         console.log(resp.data);
         if (resp.data) {
@@ -186,23 +198,40 @@ const Billing = () => {
       });
   };
 
+  const getBillingStats = () => {
+    getCall(BASE_URL + "api/doctors_m/get-billing-stats/")
+      .then((resp) => {
+        const billing_stats = resp.data;
+        if (billing_stats) {
+          setBillingStats(billing_stats);
+          console.log(billing_stats);
+        }
+      })
+      .catch((error) => {
+        console.log(error.response);
+      });
+  };
+
   useEffect(() => {
     searchCustomer(customer);
   }, [customer]);
 
   useEffect(() => {
     if (selectedCustomer !== null) {
-      console.log(selectedCustomer);
       const customer_id = selectedCustomer.id;
       if (customer_id !== undefined) {
-        console.log(customer_id);
       }
     }
   }, [selectedCustomer]);
 
   useEffect(() => {
     getInvoices();
+    getBillingStats();
   }, [""]);
+
+  useEffect(() => {
+    getInvoices();
+  }, [invoiceDate]);
 
   return (
     <div>
@@ -223,7 +252,9 @@ const Billing = () => {
                 <Grid container>
                   <Grid item sm={10}>
                     <h6 className="text-secondary">Todays total income</h6>
-                    <h5 className="text-bold">$3256</h5>
+                    <h5 className="text-bold" style={{ fontWeight: "606" }}>
+                      ₹ {billingStats.today_total_income}
+                    </h5>
                   </Grid>
                   <Grid item sm={2}>
                     <h4>IMG</h4>
@@ -244,7 +275,9 @@ const Billing = () => {
                     <h6 className="text-secondary">
                       Todays Number Appointments
                     </h6>
-                    <h5 className="text-bold">70</h5>
+                    <h5 className="text-bold" style={{ fontWeight: "606" }}>
+                      {billingStats.no_of_appointments}
+                    </h5>
                   </Grid>
                   <Grid item sm={2}>
                     <h4>IMG</h4>
@@ -321,6 +354,7 @@ const Billing = () => {
                 size="small"
                 variant="outlined"
                 sx={{ width: "100%" }}
+                disabled
               />
             </Grid>
           </Grid>
@@ -398,6 +432,27 @@ const Billing = () => {
             </Grid>
           </Grid>
         </Grid>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            marginTop: "1em",
+          }}
+        >
+          <div className="space"></div>
+          <div className="date-selector">
+            <input
+              type="date"
+              value={invoiceDate}
+              onChange={(e) => {
+                console.log(e.target.value);
+                const date = e.target.value;
+                setInvoiceDate(date);
+              }}
+              placeholder={invoiceDate}
+            />
+          </div>
+        </div>
 
         <Grid container className="mt-4">
           <TableContainer component={Paper}>

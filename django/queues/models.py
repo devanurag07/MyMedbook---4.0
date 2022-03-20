@@ -51,8 +51,8 @@ class Prescription(models.Model):
 
 # Invoice
 class BillingInvoice(models.Model):
-    billing_date = models.DateTimeField(auto_now_add=True)
-    appointment_date = models.DateTimeField()
+    billing_date = models.DateField(auto_now_add=True)
+    appointment_date = models.DateField()
     prescription = models.OneToOneField(Prescription, on_delete=models.CASCADE)
     customer = models.ForeignKey(
         QMUser, on_delete=models.CASCADE, related_name="myinvoices")

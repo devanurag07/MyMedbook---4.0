@@ -141,8 +141,6 @@ class AppointmentModel(models.Model):
 
 
 # Appoitment Time Slots Model
-
-
 class TimeSlot(models.Model):
     choices = (("Monday", "Monday"),
                ("Tuesday", "Tuesday"),

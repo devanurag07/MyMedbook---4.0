@@ -5,6 +5,7 @@ from django.db import models
 from django.db.models import Q, fields
 from numpy import source
 from rest_framework import serializers
+from queues.models import Prescription
 from users.models import AppointmentModel
 from users.models import DoctorTag
 from queues.models import BillingInvoice
@@ -303,6 +304,13 @@ class AppoitmentSerializer(serializers.ModelSerializer):
     patient_name = serializers.ReadOnlyField(source="patient.first_name")
     doctor_name = serializers.ReadOnlyField(source="doctor.first_name")
     doctor_tags = serializers.SerializerMethodField()
+    old_patient = serializers.SerializerMethodField()
+
+    def get_old_patient(self, instance):
+        old_patient = Prescription.objects.filter(
+            customer=instance.patient, created_by=instance.doctor).exists()
+
+        return old_patient
 
     def get_doctor_tags(self, instance):
         tags = instance.doctor.profile.tags.all().values_list("tag")

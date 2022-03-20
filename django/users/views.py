@@ -5,6 +5,7 @@ from pstats import Stats
 from re import T
 import re
 from shutil import ReadError
+from xmlrpc.client import DateTime
 from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.models import Group
 from django.db.models import Q
@@ -644,6 +645,9 @@ class UserMViewSet(viewsets.ModelViewSet):
 
         user = get_object_or_404(QMUser, pk=pk)
         date = request.GET.get("date", None)
+        # Clear The DateTimeSlot
+        today_date = datetime.datetime.today().date()
+        DateTimeSlot.objects.filter(date__lte=today_date).delete()
 
         if(date == None):
             doctor_dates = DateTimeSlot.objects.filter(
@@ -676,7 +680,6 @@ class UserMViewSet(viewsets.ModelViewSet):
             return Response({"timeslots": datetimeslots}, status=status.HTTP_200_OK)
 
     # Dashboard Tables
-
     @action(methods=['GET'], detail=False, url_path="get-dashboard-table")
     def get_dashborad_table(self, request):
         table_type = request.GET.get("type", None)
@@ -832,9 +835,11 @@ class DoctorsMViewSet(viewsets.ModelViewSet):
 
     @action(methods=["get"], detail=False, url_path="get-invoices")
     def get_invoices(self, request, *args, **kwargs):
-
         user = request.user
-        invoices = BillingInvoice.objects.filter(created_by=user)
+        date = request.GET.get("date").split("T")[0]
+        invoice_date = datetime.datetime.strptime(date, "%Y-%m-%d").date()
+        invoices = BillingInvoice.objects.filter(
+            created_by=user, billing_date=invoice_date)
         invoices_data = BillingInvoiceSerializer(
             invoices, many=True, context={"request": request}).data
 
@@ -896,6 +901,56 @@ class DoctorsMViewSet(viewsets.ModelViewSet):
             return Response({"data": data}, status=status.HTTP_200_OK)
 
         return Response({''})
+
+    @action(methods=['GET'], detail=False, url_path="get-dashboard-table")
+    def get_dashborad_table(self, request):
+        table_type = request.GET.get("type", None)
+        user = request.user
+        print(table_type)
+        if(table_type == "todays_appointments"):
+            today_date = datetime.datetime.today().date()
+            appointments = AppointmentModel.objects.filter(
+                doctor=user, appointmentDate=today_date).order_by("-id")
+            appointments_data = AppoitmentSerializer(
+                appointments, many=True).data
+
+            return Response({"table_rows": appointments_data})
+
+        elif table_type == 'upcoming_appointments':
+            date = datetime.datetime.today().date()
+
+            appointments = AppointmentModel.objects.exclude(
+                doctor=user, appointmentDate=date).order_by("-id")
+            appointments_data = AppoitmentSerializer(
+                appointments, many=True).data
+
+            return Response({"table_rows": appointments_data})
+
+    # Billing Stats
+    @action(methods=['GET'], detail=False, url_path="get-billing-stats")
+    def get_billing_stats(self, request):
+        today = datetime.datetime.today().date()
+        today_total_income = (
+            list(
+                BillingInvoice.objects.filter(
+                    created_by=request.user, billing_date=today).values_list("consultation_charges")))
+
+        def sum_recursion(list_):
+            total = 0
+            for item in list_:
+                if(type(item) != int):
+                    total += sum_recursion(item)
+                else:
+                    total += item
+
+            return total
+
+        today_total_income = sum_recursion(today_total_income)
+
+        no_of_appointments = AppointmentModel.objects.filter(doctor=request.user,
+                                                             appointmentDate=today).count()
+
+        return Response({"today_total_income": today_total_income, "no_of_appointments": no_of_appointments})
 
     @action(methods=["post"], detail=True, url_path="verify-otp")
     def verify_otp(self, request, pk=None, *args, **kwargs):
@@ -1009,6 +1064,10 @@ class AppointmentViewset(viewsets.ModelViewSet):
     @action(methods=['POST', 'GET'], detail=False, url_path="datetimeslots")
     def datetimeslots(self, request):
 
+        # Clear The DateTimeSlot
+        today_date = datetime.datetime.today().date()
+        DateTimeSlot.objects.filter(date__lte=today_date).delete()
+
         if(request.method == 'GET'):
             date = request.GET.get("date", None)
 
@@ -1111,10 +1170,13 @@ class AppointmentViewset(viewsets.ModelViewSet):
                     if(start_time == None or end_time == None):
                         continue
 
-                    timeslot = DateTimeSlot(
-                        date=date, start_time=start_time, end_time=end_time, doctor=request.user)
-
-                    timeslot.save()
+                    try:
+                        timeslot = get_object_or_404(
+                            DateTimeSlot, date=date, start_time=start_time, end_time=end_time, doctor=request.user)
+                    except Exception as e:
+                        timeslot = DateTimeSlot(
+                            date=date, start_time=start_time, end_time=end_time, doctor=request.user)
+                        timeslot.save()
 
                     dayAdded = True
                     timeslotCounter += 1
