@@ -1008,7 +1008,7 @@ class Dashboard extends Component {
                         </div>
                       </div>
                     </div>
-                    {/* <h4 className="header-title mb-2 mt-2 dark-title">
+                    <h4 className="header-title mb-2 mt-2 dark-title">
                       Open Queue
                       <button
                         onClick={this.queueModalToggle}
@@ -1029,7 +1029,7 @@ class Dashboard extends Component {
                       cols={this.state.columns}
                       // By -ANurag
                       rowPreCls="queue"
-                    /> */}
+                    />
 
                     <div
                       className="todays-appointment"

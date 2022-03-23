@@ -32,6 +32,7 @@ const useStyles = makeStyles((theme) => ({
       textAlign: "center",
       fontWeight: "505",
     },
+    marginTop: "1em",
     overflowX: "auto",
   },
 

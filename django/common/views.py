@@ -72,7 +72,7 @@ class OtpRequestViewSet(viewsets.ModelViewSet):
                 otp_instance.save()
                 data = self.serializer_class(otp_instance, context={
                                              'request': request}).data
-                return Response(data)
+                return Response({"otp_created":True},status=status.HTTP_200_OK)
             else:
                 return Response(json_data, status=400)
         except:

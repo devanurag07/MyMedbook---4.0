@@ -163,7 +163,7 @@ const Billing = () => {
           .then((resp) => {
             console.log(resp.data);
             let msg = resp.data.msg;
-            toast(msg);
+            toast.success(msg);
           })
           .catch((error) => {
             const data = error.response.data;

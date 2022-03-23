@@ -813,16 +813,16 @@ class DoctorsMViewSet(viewsets.ModelViewSet):
 
         if(already_exists):
 
-            # # Development Line
-            # BillingInvoice.objects.filter(
-            #     prescription=latest_presc).delete()
+            # Development Line
+            BillingInvoice.objects.filter(
+                prescription=latest_presc).delete()
 
             return Response({"msg": "Already Created", "status": "error"}, status=status.HTTP_400_BAD_REQUEST)
 
         if True:
             billing_invoice = BillingInvoice(prescription=latest_presc,
                                              consultation_charges=consultationCharges,
-                                             appointment_date=appointmentDate,
+                                             appointment_date=appointmentDate.date(),
                                              customer=customer,
                                              created_by=doctor)
 
@@ -1133,6 +1133,7 @@ class AppointmentViewset(viewsets.ModelViewSet):
             toDateObj = datetime.datetime.strptime(toDate, formatDate)
 
             deltaDays = (toDateObj-fromDateObj).days
+
             if(fromDateObj > toDateObj or datetime.datetime.today() > fromDateObj):
                 return Response({'msg': 'Invalid Timespan'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1140,8 +1141,9 @@ class AppointmentViewset(viewsets.ModelViewSet):
                 if(deltaDays > 30):
                     return Response({'msg': 'Can"t select more than 30 days '}, status=status.HTTP_400_BAD_REQUEST)
 
-                deltaDays = (toDateObj - datetime.datetime.today()).days
-                if(deltaDays > 30):
+                # No OF days from today to toDateObj
+                delta_from_today = (toDateObj - datetime.datetime.today()).days
+                if(delta_from_today > 30):
                     return Response({'msg': 'Invalid Timespan'}, status=status.HTTP_400_BAD_REQUEST)
 
             timespanDates = []

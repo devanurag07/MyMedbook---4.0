@@ -11,6 +11,7 @@ import { Alert, FormFeedback } from "reactstrap";
 import { postCall } from "../../helpers/axiosUtils";
 import { BASE_URL } from "../../helpers/constants";
 import Particles from "react-tsparticles";
+import { toast } from "react-toastify";
 
 class Register extends Component {
   constructor(props) {
@@ -100,9 +101,11 @@ class Register extends Component {
     postCall(BASE_URL + `api/common/`, data)
       .then((r) => {
         this.setState({ showOtp: true });
+        toast.success("OTP Sent");
       })
       .catch((er) => {
         this.setState({ showOtp: false });
+        toast.error("Something Went Wrong");
       });
   }
   submitHandler = (event, values) => {

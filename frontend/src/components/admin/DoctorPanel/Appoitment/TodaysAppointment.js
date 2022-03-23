@@ -130,7 +130,7 @@ const TodaysAppointment = () => {
         {tableType == "prescription" && (
          
         )} */}
-        <TableContainer component={Paper}>
+        <TableContainer component={Paper} style={{ maxHeight: "40vh" }}>
           <Table sx={{ minWidth: 650 }} aria-label="simple table">
             <TableHead className={classes.tableHead}>
               <TableRow>

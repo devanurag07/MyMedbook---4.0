@@ -133,8 +133,6 @@ export class addQueue extends Component {
   };
 
   submitHandler = (event, values) => {
-    console.log(values);
-
     event.preventDefault();
     let selectedId = this.state.formValues.id;
     values["customer"] = this.state.customer ? this.state.customer.id : null;
@@ -150,21 +148,23 @@ export class addQueue extends Component {
           this.setState((state) => ({
             isModalOpen: !state.isModalOpen,
           }));
+          toast.success("Patient Added To The Queue.");
           this.smartTable.fetchRecords(0, this.recordPerPage);
         })
-        .catch((er) => {});
+        .catch((er) => {
+          toast.error("Something went wrong.");
+        });
     } else {
       postCall(BASE_URL + "api/queue/", values)
         .then((r) => {
-          console.log("Queue");
-          console.log(r);
-
           if (r.status == 200) {
-            console.log("I am here");
+            toast.success("Patient Added To The Queue.");
             this.props.history.push("/app/dashboard");
           }
         })
-        .catch((er) => {});
+        .catch((er) => {
+          toast.error("Something went wrong.");
+        });
     }
   };
 
