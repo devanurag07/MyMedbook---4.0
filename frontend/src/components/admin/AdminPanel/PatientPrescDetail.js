@@ -73,7 +73,7 @@ const PatientPrescDetail = (props) => {
     prescriptionData.customer == currentUser.id;
 
   const getPrescriptionData = () => {
-    const url = `${BASE_URL}api/admin_m/${presc_id}/get-prescription/`;
+    const url = `${BASE_URL}api/common_m/${presc_id}/get-prescription/`;
     axios.get(url).then((resp) => {
       setPrescriptionData(resp.data.data);
       getMedicinesList();

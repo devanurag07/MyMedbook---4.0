@@ -247,7 +247,6 @@ class Customers extends Component {
                             "mobile"
                           )}
                           className="form-control sm"
-                          required
                           placeholder="Please enter the mobile"
                         />
                         {this.state.mobileExist && (

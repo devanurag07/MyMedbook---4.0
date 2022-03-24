@@ -1,0 +1,8 @@
+Response Format : - 
+    {
+        "status":"200",
+        "msg":"Admin Panel Error",
+        "success":"false",
+        "response":""
+            
+    }

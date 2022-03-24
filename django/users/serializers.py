@@ -368,3 +368,77 @@ class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = DoctorTag
         fields = "__all__"
+
+
+# Admin Dashboard Tables
+class DoctorTableSerializer(serializers.ModelSerializer):
+    total_earning = serializers.SerializerMethodField()
+    speciality = serializers.SerializerMethodField()
+
+    def get_total_earning(self, instance):
+        def sum_recursion(list_):
+            total = 0
+            for item in list_:
+                if(type(item) != int):
+                    total += sum_recursion(item)
+                else:
+                    total += item
+
+            return total
+
+        invoices = BillingInvoice.objects.filter(
+            created_by=instance).values_list("consultation_charges")
+        invoices = list(invoices)
+        total_earnings = sum_recursion(invoices)
+
+        return total_earnings
+
+    def get_speciality(self, instance):
+        if(instance.profile.tags):
+            return instance.profile.tags.all()[0].tag
+
+        return "Nothing"
+
+    class Meta:
+        model = QMUser
+        fields = ["username", "first_name",
+                  "last_name", "total_earning", "speciality"]
+
+
+class PatientTableSerializer(serializers.ModelSerializer):
+    total_paid = serializers.SerializerMethodField()
+    last_visit = serializers.SerializerMethodField()
+    mobile = serializers.ReadOnlyField(source="profile.mobile")
+
+    def get_total_paid(self, instance):
+        def sum_recursion(list_):
+            total = 0
+            for item in list_:
+                if(type(item) != int):
+                    total += sum_recursion(item)
+                else:
+                    total += item
+
+            return total
+
+        appointments = AppointmentModel.objects.filter(
+            patient=instance, status=1).values_list("consultation_charges")
+
+        appointments = list(appointments)
+        total_paid = sum_recursion(appointments)
+
+        return total_paid
+
+    def get_last_visit(self, instance):
+        last_prescription = Prescription.objects.filter(
+            customer=instance).order_by("-pk").first()
+
+        if(last_prescription):
+            return last_prescription.created_at.date()
+
+        return None
+
+    class Meta:
+        model = QMUser
+        fields = ["username", "first_name", "last_name",
+                  'total_paid', 'last_visit', 'mobile']

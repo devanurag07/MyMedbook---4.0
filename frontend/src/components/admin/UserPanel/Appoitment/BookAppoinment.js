@@ -151,7 +151,7 @@ const BookAppoinment = () => {
   const [appointmentData, setAppointmentData] = useState({});
 
   const getDoctorData = () => {
-    getCall(BASE_URL + `api/admin_m/${doctor_id}/get-doctor/`).then((resp) => {
+    getCall(BASE_URL + `api/common_m/${doctor_id}/get-doctor/`).then((resp) => {
       if (resp.status == 200) {
         if (resp.data) {
           const doctorData = resp.data;

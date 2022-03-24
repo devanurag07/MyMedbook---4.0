@@ -64,7 +64,7 @@ const PrescriptionsList = ({ tableRows }) => {
   const [printPdfModal, setPrintPdfModal] = useState(false);
 
   const getPrescriptionData = (presc_id) => {
-    const url = `${BASE_URL}api/admin_m/${presc_id}/get-prescription/`;
+    const url = `${BASE_URL}api/common_m/${presc_id}/get-prescription/`;
     axios.get(url).then((resp) => {
       setPrescriptionData(resp.data.data);
       getMedicinesList();

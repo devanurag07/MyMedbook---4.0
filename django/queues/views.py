@@ -176,7 +176,7 @@ class QueueViewSet(viewsets.ModelViewSet):
             'pending': query_set.filter(status=0, deleted=False).count(),
             'closed': query_set.filter(status=1, deleted=False).count(),
             'deleted': query_set.filter(deleted=True).count(),
-            'total_payment': payment_data['amount__sum']
+
         }
 
         if(request.user.is_superuser):
@@ -190,6 +190,8 @@ class QueueViewSet(viewsets.ModelViewSet):
                 profile__role_id=customer_role_id).count()
             resp_data["total_doctors"] = QMUser.objects.filter(
                 profile__role_id=doctor_role_id).count()
+
+            resp_data["total_payment"] = payment_data['amount__sum']/100
 
         return Response(resp_data)
 

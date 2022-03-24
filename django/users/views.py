@@ -24,6 +24,10 @@ from rest_framework_jwt.settings import api_settings
 from sqlalchemy import alias
 from common.models import OtpRequests
 from common.fastsms import send_message
+from common.utils import get_data_format
+from users.serializers import PatientTableSerializer
+from users.serializers import DoctorTableSerializer
+from users.permissions import IsAdmin
 from users.serializers import UserSerializerReadOnly
 from users.models import DoctorTag
 from users.serializers import TagSerializer
@@ -51,8 +55,6 @@ import random
 
 from io import BytesIO
 import datetime
-
-
 # Appointment mECHANISM
 from users.models import AppointmentModel
 from users.serializers import AppoitmentSerializer
@@ -412,16 +414,12 @@ class GroupsViewSet(viewsets.ModelViewSet):
         queryset = self.get_queryset()
         serializer = GroupSerializer(
             queryset, many=True, context={'request': request})
+
         return Response(serializer.data)
 
 
-class AdminViewset(viewsets.ModelViewSet):
-    permission_classes = [permissions.IsAuthenticated]
-    serializer_class = UsersSerializer
-
-    def get_queryset(self):
-        queryset = QMUser.objects.all()
-        return queryset
+class AdminMViewset(viewsets.ViewSet):
+    permission_classes = [permissions.IsAuthenticated, IsAdmin]
 
     @action(methods=["get"], detail=True, url_path="get-doctor")
     def get_doctor(self, request, pk=None, *args, **kwargs):
@@ -473,6 +471,65 @@ class AdminViewset(viewsets.ModelViewSet):
     def get_prescription(self, request, pk=None, *args, **kwargs):
 
         prescription = get_object_or_404(Prescription, id=pk)
+        data = PrescriptionSerializer(prescription).data
+        return Response({'data': data})
+
+    @action(methods=["get"], detail=False, url_path="get-tables-data")
+    def get_tables_data(self, request, pk=None, *args, **kwargs):
+        # table_type=request.GET.get("table_type","doctors")
+        doctor_role = Roles.objects.filter(alias=Doctors_USER_TYPE).first()
+        doctors_list = QMUser.objects.filter(profile__role_id=doctor_role.id)
+        doctors_list = DoctorTableSerializer(doctors_list, many=True).data
+
+        customer_role = Roles.objects.filter(alias=CUSTOMERS_USER_TYPE).first()
+        customers_list = QMUser.objects.filter(
+            profile__role_id=customer_role.id)
+        customers_list = PatientTableSerializer(customers_list, many=True).data
+
+        data = get_data_format()
+        data["response"] = {
+            "doctors_list": doctors_list,
+            "customers_list": customers_list
+        }
+        data["msg"] = "Doctors List"
+        data["status"] = 200
+        return Response(data)
+
+
+# Name IS Admin ViewSET but
+# multiple users consumes it
+class CommonMViewset(viewsets.ViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = UsersSerializer
+
+    def get_queryset(self):
+        queryset = QMUser.objects.all()
+        return queryset
+
+    def list(self, request, *args, **kwargs):
+        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def create(self, request, *args, **kwargs):
+        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def update(self, request, *args, **kwargs):
+        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def delete(self, request, *args, **kwargs):
+        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    @action(methods=["get"], detail=True, url_path="get-doctor")
+    def get_doctor(self, request, pk=None, *args, **kwargs):
+        doctor_role = Roles.objects.filter(alias=Doctors_USER_TYPE).first()
+        doctor = QMUser.objects.filter(
+            profile__role_id=doctor_role.id, id=pk).first()
+
+        return Response(UsersSerializer(doctor, context={"request": request}).data)
+
+    @action(methods=["get"], detail=True, url_path="get-prescription")
+    def get_prescription(self, request, pk=None, *args, **kwargs):
+
+        prescription = get_object_or_404(Prescription, id=pk)
 
         if(request.user.is_superuser):
             data = PrescriptionSerializer(prescription).data
@@ -501,13 +558,8 @@ class AdminViewset(viewsets.ModelViewSet):
         return Response({})
 
 
-class UserMViewSet(viewsets.ModelViewSet):
+class UserMViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
-    serializer_class = UsersSerializer
-
-    def get_queryset(self):
-        queryset = QMUser.objects.all()
-        return queryset
 
     @action(methods=["get"], detail=False, url_path="get-myrecords")
     def get_myrecords(self, request, *args, **kwargs):
@@ -712,14 +764,8 @@ class UserMViewSet(viewsets.ModelViewSet):
             return Response({"table_rows": billings_data})
 
 
-class DoctorsMViewSet(viewsets.ModelViewSet):
+class DoctorsMViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated, IsDoctor]
-    serializer_class = UsersSerializer
-
-    def get_queryset(self):
-        customer_role = Roles.objects.filter(alias=CUSTOMERS_USER_TYPE)[0]
-        queryset = QMUser.objects.filter(profile__role_id=customer_role.id)
-        return queryset
 
     @action(methods=["get"], detail=True, url_path="get-customer-detail")
     def get_customer_details(self, request, pk=None, *args, **kwargs):
@@ -981,15 +1027,8 @@ class DoctorsMViewSet(viewsets.ModelViewSet):
             return Response({"status": "not_found"}, status=status.HTTP_404_NOT_FOUND)
 
 
-class AppointmentViewset(viewsets.ModelViewSet):
+class AppointmentViewset(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated, IsDoctor]
-    serializer_class = AppoitmentSerializer
-
-    def get_queryset(self):
-        user = self.request.user
-        queryset = AppointmentModel.objects.filter(doctor=user)
-
-        return queryset
 
     @action(methods=['POST', 'GET'], detail=False, url_path="daytimeslots")
     def daytimeslots(self, request):

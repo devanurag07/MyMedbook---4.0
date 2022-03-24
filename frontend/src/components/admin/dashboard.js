@@ -30,6 +30,7 @@ import axios from "axios";
 import NewUserDashboard from "./UserPanel/NewUserDashboard";
 import { Grid, Paper } from "@mui/material";
 import TodaysAppointment from "./DoctorPanel/Appoitment/TodaysAppointment";
+import DashboardTables from "./AdminPanel/DashboardTables";
 
 class Dashboard extends Component {
   recordPerPage = 15;
@@ -258,7 +259,7 @@ class Dashboard extends Component {
           },
           chart: {
             type: "area",
-            height: "180cd dpx",
+            height: "250cd dpx",
           },
           xAxis: {
             categories: responseData.day_choices,
@@ -609,21 +610,187 @@ class Dashboard extends Component {
                 </div>
               </div>
             </div>
+            <Grid container justifyContent={"space-between"}>
+              <Grid item sm={7}>
+                <Paper>
+                  <h5
+                    // className="primary-font-color"
+                    style={{
+                      fontWeight: "505",
+                      padding: "1em",
+                    }}
+                  >
+                    Revenue
+                  </h5>
+                  <HighchartsReact
+                    highcharts={Highcharts}
+                    options={this.state.chartOptions}
+                  />
+                </Paper>
+              </Grid>
 
-            <div className="row">
-              <h5
-                className="primary-font-color"
-                style={{ fontWeight: "606", marginTop: "2em" }}
-              >
-                This Week Customer Visit
-              </h5>
-              <div className="col-6">
-                <HighchartsReact
-                  highcharts={Highcharts}
-                  options={this.state.chartOptions}
-                />
-              </div>
-            </div>
+              <Grid item sm={4}>
+                <div
+                  className="row"
+                  style={{
+                    padding: "1em",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    height: "100%",
+                  }}
+                >
+                  <div className="col-12 ">
+                    <h5 style={{ fontWeight: "505" }}>Previous Year</h5>
+                    <div
+                      className="card previous-month-card"
+                      style={{ padding: "0.5em 0em" }}
+                    >
+                      <div className="card-body">
+                        <div className="row">
+                          <div className="col-8">
+                            <div className="text-start">
+                              <p
+                                className="text-muted mb-1 text-truncate previous text-gray"
+                                style={{ color: "grey !important" }}
+                              >
+                                {this.state.highcharts
+                                  ? this.state.highcharts.month_choices[1]
+                                  : ""}
+                              </p>
+                              <div className="row">
+                                <Grid container>
+                                  <Grid item sm={6}>
+                                    <div className="total-patients">
+                                      <div className="col-12 text-start">
+                                        <p className="text-muted fs-07 mb-0 text-truncate">
+                                          Total Patients
+                                        </p>
+                                      </div>
+                                      <h3 className="text-dark previous fw-500 text-black">
+                                        <span data-plugin="counterup">
+                                          {this.state.highcharts
+                                            ? this.state.highcharts
+                                                .previous_month_data[0]
+                                            : ""}
+                                        </span>
+                                      </h3>
+                                    </div>
+                                  </Grid>
+
+                                  <Grid item sm={6}>
+                                    <div className="total-patients">
+                                      <div className="col-12 text-start">
+                                        <p className="text-muted fs-07 mb-0 text-truncate">
+                                          Total Revenue
+                                        </p>
+                                      </div>
+                                      <h3 className="text-dark previous fw-500 text-black">
+                                        <span data-plugin="counterup">
+                                          {this.state.highcharts
+                                            ? this.state.highcharts
+                                                .previous_month_data[0]
+                                            : ""}
+                                        </span>
+                                      </h3>
+                                    </div>
+                                  </Grid>
+                                </Grid>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="col-4 avatar-container">
+                            <div className="avatar-lg rounded-circle cbg-light">
+                              <img
+                                className="icon-circle avatar-title"
+                                src="/img/patient-_1_.svg"
+                                height="52"
+                                width="52"
+                              ></img>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="col-12 mt-1">
+                    <div
+                      className="card previous-month-card"
+                      style={{ padding: "0.5em 0em" }}
+                    >
+                      <div className="card-body">
+                        <div className="row">
+                          <div className="col-8">
+                            <div className="text-start">
+                              <p
+                                className="text-muted mb-1 text-truncate previous text-gray"
+                                style={{ color: "grey !important" }}
+                              >
+                                {this.state.highcharts
+                                  ? this.state.highcharts.month_choices[0]
+                                  : ""}
+                              </p>
+                              <div className="row">
+                                <Grid container>
+                                  <Grid item sm={6}>
+                                    <div className="total-patients">
+                                      <div className="col-12 text-start">
+                                        <p className="text-muted fs-07 mb-0 text-truncate">
+                                          Total Patients
+                                        </p>
+                                      </div>
+                                      <h3 className="text-dark previous fw-500 text-black">
+                                        <span data-plugin="counterup">
+                                          {this.state.highcharts
+                                            ? this.state.highcharts
+                                                .previous_month_data[0]
+                                            : ""}
+                                        </span>
+                                      </h3>
+                                    </div>
+                                  </Grid>
+
+                                  <Grid item sm={6}>
+                                    <div className="total-patients">
+                                      <div className="col-12 text-start">
+                                        <p className="text-muted fs-07 mb-0 text-truncate">
+                                          Total Revenue
+                                        </p>
+                                      </div>
+                                      <h3 className="text-dark previous fw-500 text-black">
+                                        <span data-plugin="counterup">
+                                          {this.state.highcharts
+                                            ? this.state.highcharts
+                                                .previous_month_data[0]
+                                            : ""}
+                                        </span>
+                                      </h3>
+                                    </div>
+                                  </Grid>
+                                </Grid>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="col-4 avatar-container">
+                            <div className="avatar-lg rounded-circle cbg-light">
+                              <img
+                                className="icon-circle avatar-title"
+                                src="/img/patient-_1_.svg"
+                                height="52"
+                                width="52"
+                              ></img>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Grid>
+            </Grid>
+
+            <DashboardTables />
           </div>
         )}
 

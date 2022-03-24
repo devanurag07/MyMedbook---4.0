@@ -30,3 +30,11 @@ def get_client_ip(request):
     else:
         ip = request.META.get('REMOTE_ADDR')
     return ip
+
+
+def get_data_format():
+    return {
+        "success": True,
+        "msg": "Default",
+        "status": 200,
+    }
