@@ -1,4 +1,5 @@
 import datetime
+from getpass import getuser
 from multiprocessing import context
 from os import remove, stat, times
 from pstats import Stats
@@ -200,15 +201,20 @@ class UsersViewSet(viewsets.ModelViewSet):
     @action(methods=['post'], detail=False, url_path='update-profile')
     def update_profile(self, request):
         user = self.request.user
-        user.first_name = request.data['first_name']
 
-        email = request.data['email']
-        mobile = request.data["mobile"]
+        def get_user_field(field, obj=user):
+            value = request.data.get(field, getattr(obj, field))
+            return value
+
+        user.first_name = get_user_field("first_name", user)
+        user.last_name = get_user_field('last_name', user)
+
+        email = get_user_field("email")
+        mobile = get_user_field("mobile", user.profile)
 
         errors = {
             'emailExists': False,
             'mobileExists': False,
-
         }
 
         if(QMUser.objects.filter(email=email).exists()):
@@ -217,6 +223,7 @@ class UsersViewSet(viewsets.ModelViewSet):
             errors['mobileExists'] = True
 
         user.save()
+
         if hasattr(user, 'profile'):
             profile = user.profile
         else:
@@ -233,52 +240,64 @@ class UsersViewSet(viewsets.ModelViewSet):
             user.save()
 
         if(not errors['mobileExists']):
-            profile.mobile = request.data['mobile']
+            profile.mobile = mobile
             profile.save()
 
-        profile.address_line1 = request.data['address_line1']
+        from users.models import UserProfile
+        doctor_role = Roles.objects.filter(alias=Doctors_USER_TYPE).first()
+        if(user.profile):
+            profile = user.profile
+            # Doctor Updating
+            if(profile.role_id == doctor_role.id):
+                profile.address_line1 = request.data['address_line1']
 
-        if 'agreement_file' in request.FILES:
-            profile.agreement_file = request.FILES['agreement_file']
-            profile.document_rejected = False
+                if 'agreement_file' in request.FILES:
+                    profile.agreement_file = request.FILES['agreement_file']
+                    profile.document_rejected = False
 
-        if 'degree_certificate' in request.FILES:
-            profile.degree_certificate = request.FILES['degree_certificate']
+                if 'degree_certificate' in request.FILES:
+                    profile.degree_certificate = request.FILES['degree_certificate']
 
-        if 'doctor_registration' in request.FILES:
-            profile.doctor_registration = request.FILES['doctor_registration']
+                if 'doctor_registration' in request.FILES:
+                    profile.doctor_registration = request.FILES['doctor_registration']
 
-        if 'clinic_address_proof' in request.FILES:
-            profile.clinic_address_proof = request.FILES['clinic_address_proof']
+                if 'clinic_address_proof' in request.FILES:
+                    profile.clinic_address_proof = request.FILES['clinic_address_proof']
 
-        if 'clinic_name' in request.data:
-            profile.clinic_name = request.data['clinic_name']
+                if 'clinic_name' in request.data:
+                    profile.clinic_name = request.data['clinic_name']
 
-        if 'clinic_registeration_no' in request.data:
-            profile.clinic_registeration_no = request.data['clinic_registeration_no']
+                if 'clinic_registeration_no' in request.data:
+                    profile.clinic_registeration_no = request.data['clinic_registeration_no']
 
-        if 'doctor_registeration_no' in request.data:
-            profile.doctor_registeration_no = request.data['doctor_registeration_no']
+                if 'doctor_registeration_no' in request.data:
+                    profile.doctor_registeration_no = request.data['doctor_registeration_no']
 
-        if 'your_sign' in request.FILES:
-            img = request.FILES['your_sign']
-            # from PIL import Image
-            # img = Image.open(img)
-            # img.thumbnail((50, 50))
-            # buffer = BytesIO()
+                if 'your_sign' in request.FILES:
+                    img = request.FILES['your_sign']
+                    # from PIL import Image
+                    # img = Image.open(img)
+                    # img.thumbnail((50, 50))
+                    # buffer = BytesIO()
 
-            # img.save(fp=buffer, format="svg")
+                    # img.save(fp=buffer, format="svg")
 
-            # img_file = ContentFile(buffer.getvalue())
+                    # img_file = ContentFile(buffer.getvalue())
 
-            # img_uploaded_file = InMemoryUploadedFile(
-            #     img_file, 'your_sign', f"image-{str(request.user.username)}", "image/svg", img_file.tell, None)
+                    # img_uploaded_file = InMemoryUploadedFile(
+                    #     img_file, 'your_sign', f"image-{str(request.user.username)}", "image/svg", img_file.tell, None)
 
-            profile.your_sign = img
+                    profile.your_sign = img
+
+        password = get_user_field("password")
+        if(not bool(user.password) and bool(password)):
+            user.set_password(password)
+            user.save()
 
         profile.save()
         user_details = UsersSerializer(user, context={'request': request}).data
         user_details["errors"] = errors
+
         return Response(user_details)
 
     @action(methods=['post'], detail=False, url_path='update-customer')

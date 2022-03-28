@@ -2,6 +2,8 @@ from rest_framework import permissions
 from rest_framework import viewsets, status, views
 from rest_framework.response import Response
 from rest_framework.decorators import action
+from common.utils import get_data_format
+from generics.constants import CUSTOMERS_USER_TYPE
 from generics.constants import DEFAULT_USER_TYPE
 from users.serializers import UsersSerializer
 from users.models import QMUser, UserProfile, Group, Roles
@@ -72,7 +74,7 @@ class OtpRequestViewSet(viewsets.ModelViewSet):
                 otp_instance.save()
                 data = self.serializer_class(otp_instance, context={
                                              'request': request}).data
-                return Response({"otp_created":True},status=status.HTTP_200_OK)
+                return Response({"otp_created": True}, status=status.HTTP_200_OK)
             else:
                 return Response(json_data, status=400)
         except:
@@ -102,12 +104,16 @@ class OtpRequestViewSet(viewsets.ModelViewSet):
     def verify(self, request, *args, **kwargs):
         '''
                         from generics.Mailer import Mailer
-                        verify_data = Mailer.verify_otp(form_data['phone_number'], form_data['otp'], 'mobile')
+                        verify_data = Mailer.verify_otp(
+                            form_data['phone_number'], form_data['otp'], 'mobile')
                         if verify_data['type'] == 'success':
-                            OtpRequests.objects.filter(phone_number=form_data['phone_number'], otp=form_data['otp']).update(status=True)
-                            user_exist = QMUser.objects.filter(username=request.data['phone_number']).first()
+                            OtpRequests.objects.filter(
+                                phone_number=form_data['phone_number'], otp=form_data['otp']).update(status=True)
+                            user_exist = QMUser.objects.filter(
+                                username=request.data['phone_number']).first()
                             if user_exist:
-                                user = QMUser.objects.get(username=request.data['phone_number'])
+                                user = QMUser.objects.get(
+                                    username=request.data['phone_number'])
                                 user.set_password(form_data['otp'])
                                 user.save()
                             else:
@@ -116,8 +122,10 @@ class OtpRequestViewSet(viewsets.ModelViewSet):
                                 user = QMUser()
                                 user.__dict__.update(**form_data)
                                 user.save()
-                                user_role = Roles.objects.filter(alias=DEFAULT_USER_TYPE).first()
-                                permission_groups = Group.objects.filter(id=user_role.id)
+                                user_role = Roles.objects.filter(
+                                    alias=DEFAULT_USER_TYPE).first()
+                                permission_groups = Group.objects.filter(
+                                    id=user_role.id)
                                 user.set_password(form_data['otp'])
                                 user.save()
                                 user.groups.set(permission_groups)
@@ -129,7 +137,8 @@ class OtpRequestViewSet(viewsets.ModelViewSet):
                                 user_profile.created_by = QMUser.objects.first()
                                 user_profile.mobile = form_data['phone_number']
                                 user_profile.save()
-                            user_details = UsersSerializer(user, context={'request': request}).data
+                            user_details = UsersSerializer(
+                                user, context={'request': request}).data
                             # handle the users token's
                             payload_handler = api_settings.JWT_PAYLOAD_HANDLER
                             encode_handler = api_settings.JWT_ENCODE_HANDLER
@@ -142,7 +151,7 @@ class OtpRequestViewSet(viewsets.ModelViewSet):
                         '''
         form_data = request.data
         otp_exist = OtpRequests.objects.filter(
-            phone_number=form_data['mobile'], otp=form_data['otp']).first()
+            phone_number=form_data['mobile'], otp=form_data['otp'], status=False).first()
         if otp_exist:
             OtpRequests.objects.filter(
                 phone_number=request.data['mobile']).update(status=True)
@@ -376,3 +385,186 @@ class OtpRequestViewSet(viewsets.ModelViewSet):
         user.set_password(form_data['password'])
         user.save()
         return Response(True)
+
+    @action(methods=['post'], detail=False, url_path='auth-patient')
+    def auth_patient(self, request, **kwargs):
+
+        data = request.data
+        mobile = data.get("mobile", None)
+        resp_data = get_data_format()
+
+        if(mobile):
+            is_valid, resp = validate_mobile(mobile)
+            if(not is_valid):
+                return Response(resp)
+
+            isRegistered = QMUser.objects.filter(
+                profile__mobile=mobile).exists()
+
+            "login -> otp"
+            otp = random.randrange(1, 10 ** 6)
+            # Delete Previous OTP
+            OtpRequests.objects.filter(
+                phone_number=mobile, status=False).delete()
+
+            otp_request = OtpRequests.objects.create(phone_number=mobile,
+                                                     otp=otp)
+
+            message = 'Your Verification code is %s. valid 5 minutes only' % otp_request.otp
+            # data = Mailer.send_sms(message, otp_instance.phone_number, otp_instance.otp)
+            message_resp = send_message(request.data['mobile'], message)
+            print(otp)
+            if(message_resp.status_code == 200):
+                resp_data["status"] = 200
+                resp_data["msg"] = "OTP Sent Successfully"
+                resp_data["success"] = True
+                resp_data["response"] = {
+                    "isRegistered": True,
+                }
+
+                return Response(resp_data, status=status.HTTP_200_OK)
+
+            else:
+                resp_data["status"] = 201
+                resp_data["msg"] = "API Failed to Send OTP"
+                resp_data["success"] = False
+                resp_data["response"] = {
+                    "isRegistered": isRegistered,
+                }
+
+                return Response(resp_data)
+        else:
+            resp_data["status"] = 202
+            resp_data["msg"] = "Mobile No. Required"
+            resp_data["success"] = False
+
+            return Response(resp_data)
+
+    @action(methods=['post'], detail=False, url_path='verify-patient-otp')
+    def verify_patient_otp(self, request, **kwargs):
+        data = request.data
+        mobile = data.get("mobile", None)
+        otp = data.get("otp", None)
+
+        resp_data = get_data_format()
+        if(mobile == None or otp == None):
+            resp_data["status"] = 203
+            resp_data["msg"] = "Mobile And OTP Both Are Required"
+            resp_data["success"] = False
+
+            return Response(resp_data)
+
+        is_valid, resp = validate_mobile(mobile)
+        if(not is_valid):
+            return Response(resp)
+
+        otp_request = OtpRequests.objects.filter(
+            phone_number=mobile, otp=otp, status=False).first()
+
+        # Verified
+        if(otp_request):
+            user = QMUser.objects.filter(
+                profile__mobile=mobile).first()
+            # Login
+            if(user):
+
+                resp_data["status"] = 200
+                resp_data["msg"] = "Login Successfully"
+                resp_data["success"] = True
+
+                user_details = UsersSerializer(
+                    user, context={'request': request}).data
+                # handle the users token's
+                payload_handler = api_settings.JWT_PAYLOAD_HANDLER
+                encode_handler = api_settings.JWT_ENCODE_HANDLER
+                payload = payload_handler(user)
+                token = encode_handler(payload)
+                user_details['token'] = token
+                resp_data["response"] = {
+                    "user_created": False, "user": user_details}
+
+                return Response(resp_data)
+            else:
+                # SignUP
+                user = QMUser()
+                user.username = mobile
+
+                user.save()
+
+                profile = UserProfile(
+                    mobile=mobile, created_by=user, user=user)
+                # AS A Customer
+                customer_role = Roles.objects.filter(
+                    alias=CUSTOMERS_USER_TYPE).first()
+                profile.role_id = customer_role.id
+                profile.save()
+
+                user_details = UsersSerializer(
+                    user, context={'request': request}).data
+                # handle the users token's
+                payload_handler = api_settings.JWT_PAYLOAD_HANDLER
+                encode_handler = api_settings.JWT_ENCODE_HANDLER
+                payload = payload_handler(user)
+                token = encode_handler(payload)
+                user_details['token'] = token
+
+                resp_data["status"] = 200
+                resp_data["msg"] = "User Created Successfully"
+                resp_data["success"] = True
+
+                resp_data["response"] = {
+                    "user_created": True, "user": user_details}
+
+                return Response(resp_data)
+
+        else:
+            # If OTP GOES WRONG
+            resp_data["success"] = False
+
+            otp_request = OtpRequests.objects.filter(
+                phone_number=mobile, status=False).first()
+
+            if(otp_request):
+                otp_request.attempts += 1
+                otp_request.save()
+
+                if(otp_request.attempts >= 5):
+                    OtpRequests.objects.filter(
+                        phone_number=mobile, status=False).delete()
+
+                    resp_data["status"] = 205
+                    resp_data["msg"] = "All OTP Attempts Exhausted"
+
+                    return Response(resp_data)
+
+                resp_data["status"] = 204
+                resp_data["msg"] = f"OTP Attempts {5-otp_request.attempts} Remaining"
+
+                return Response(resp_data)
+
+            else:
+                resp_data["status"] = 206
+                resp_data["msg"] = f"NO OTP Found"
+
+                return Response(resp_data)
+
+
+def validate_mobile(mobile):
+
+    data = get_data_format()
+    is_valid = True
+    if(not mobile.isnumeric):
+        data["status"] = 207
+        data["msg"] = "Invalid Mobile Number"
+        data["success"] = False
+        is_valid = False
+        return is_valid, data
+
+    if(len(mobile) != 10):
+        data["status"] = 207
+        data["msg"] = "Invalid Mobile Number"
+        data["success"] = False
+        is_valid = False
+        return is_valid, data
+
+    return is_valid, {}

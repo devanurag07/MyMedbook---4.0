@@ -1,3 +1,4 @@
+from enum import unique
 from re import T
 from django.contrib.auth.models import AbstractUser, Group
 from django.db import models
@@ -43,7 +44,7 @@ class UserProfile(models.Model):
     state = models.CharField(max_length=150, null=True)
     country = models.CharField(max_length=100, null=True, default='IN')
     pin_code = models.CharField(max_length=100, null=True)
-    mobile = models.BigIntegerField(null=True)
+    mobile = models.BigIntegerField(null=True, unique=True)
     subscription_active_at = models.DateTimeField(null=True)
     amount = models.DecimalField(max_digits=15, decimal_places=2, null=True)
     created_by = models.ForeignKey(

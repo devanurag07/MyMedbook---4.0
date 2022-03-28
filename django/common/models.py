@@ -18,17 +18,18 @@ class AboutUs(models.Model):
 
 class ApiKeys(models.Model):
     ip = models.CharField(max_length=2555)
-    token = models.TextField();
+    token = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     history = HistoricalRecords()
 
 
 class OtpRequests(models.Model):
-    phone_number = models.CharField(default=0, max_length= 50)
+    phone_number = models.CharField(default=0, max_length=50)
     otp = models.IntegerField(default=0, null=False)
     status = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     history = HistoricalRecords()
+    attempts = models.IntegerField(default=0)
 
 
 class OTPVerification(models.Model):
@@ -36,4 +37,3 @@ class OTPVerification(models.Model):
     otp = models.IntegerField(default=0, null=False)
     deleted = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
-

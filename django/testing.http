@@ -1,0 +1,17 @@
+POST http://127.0.0.1:8000/api/common/auth-patient/ HTTP/1.1
+content-type: application/json
+
+{
+    "mobile":"9837664975"
+}
+
+###
+POST http://127.0.0.1:8000/api/common/verify-patient-otp/ HTTP/1.1
+content-type: application/json
+
+{
+    "mobile":"9837664975",
+    "otp":"266057"
+    
+}
+

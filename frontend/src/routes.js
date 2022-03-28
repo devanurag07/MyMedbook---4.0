@@ -18,6 +18,9 @@ const PAP = React.lazy(() => import("./components/pp"));
 const NotFound = React.lazy(() => import("./components/notfound"));
 const ContactUs = React.lazy(() => import("./components/contactus"));
 const Register = React.lazy(() => import("./components/signup/signup"));
+const AuthPatient = React.lazy(() =>
+  import("./components/signup/SignUpCustomer")
+);
 const Admin = React.lazy(() => import("./components/admin/admin"));
 const ResetPassword = React.lazy(() => import("./components/reset-password"));
 const NonAuthRoute = ({ component: Component, roles, ...rest }) => (
@@ -29,7 +32,8 @@ const NonAuthRoute = ({ component: Component, roles, ...rest }) => (
       if (
         isAuthTokenValid &&
         (props.location.pathname === "/signup" ||
-          props.location.pathname === "/login")
+          props.location.pathname === "/login" ||
+          props.location.pathname === "/signup-patient")
       ) {
         return (
           <Redirect to={{ pathname: "/", state: { from: props.location } }} />
@@ -86,7 +90,8 @@ const PrivateRoute = ({ component: Component, roles, userInfo, ...rest }) => (
       if (
         isAuthTokenValid &&
         (props.location.pathname === "/signup" ||
-          props.location.pathname === "/login")
+          props.location.pathname === "/login" ||
+          props.location.pathname === "/signup-patient")
       ) {
         return (
           <Redirect to={{ pathname: "/", state: { from: props.location } }} />
@@ -111,6 +116,13 @@ const routes = [
     exact: true,
     name: "signup",
     component: Register,
+    route: NonAuthRoute,
+  },
+  {
+    path: "/signup-patient",
+    exact: true,
+    name: "signup",
+    component: AuthPatient,
     route: NonAuthRoute,
   },
   {
