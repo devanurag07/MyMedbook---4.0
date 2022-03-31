@@ -21,7 +21,14 @@ const Review = (props) => {
     axios
       .get(BASE_URL + `api/userpanel/${doctor_pk}/doctor-name`)
       .then((resp) => {
-        setDoctorName(resp.data);
+        const resp_data = resp.data;
+        if (resp_data.success) {
+          const doctor_name = resp_data.response;
+          setDoctorName(doctor_name);
+        } else {
+          const error_msg = resp_data.msg;
+          toast.error(error_msg);
+        }
       });
   };
 
@@ -35,12 +42,14 @@ const Review = (props) => {
         review_text: reviewText,
       })
       .then((resp) => {
-        // setDoctorName(resp.data);
-        if (resp.status == 200) {
-          toast("Review Sent");
+        const resp_data = resp.data;
+        if (resp_data.success) {
+          toast.success("Review Sent");
           setReviewText("");
+        } else {
+          const error_msg = resp_data.msg;
+          toast.error(error_msg);
         }
-        console.log(resp.data);
       });
   };
 

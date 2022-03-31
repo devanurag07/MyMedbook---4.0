@@ -13,6 +13,7 @@ from django.db.models import Q
 from django.db.models.query import QuerySet
 from django.http import JsonResponse
 from django.utils.decorators import method_decorator
+from numpy import True_
 from rest_framework import permissions
 from rest_framework import viewsets, status
 from rest_framework import response
@@ -440,13 +441,22 @@ class GroupsViewSet(viewsets.ModelViewSet):
 class AdminMViewset(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated, IsAdmin]
 
+    # "Refactored"
+
     @action(methods=["get"], detail=True, url_path="get-doctor")
     def get_doctor(self, request, pk=None, *args, **kwargs):
         doctor_role = Roles.objects.filter(alias=Doctors_USER_TYPE).first()
         doctor = QMUser.objects.filter(
             profile__role_id=doctor_role.id, id=pk).first()
 
-        return Response(UsersSerializer(doctor, context={"request": request}).data)
+        resp_data = get_data_format()
+        resp_data['success'] = True
+        resp_data["status"] = 200
+        resp_data['response'] = UsersSerializer(
+            doctor, context={"request": request}).data
+        resp_data['msg'] = 'Getting the doctor info'
+
+        return Response(resp_data)
 
     @action(methods=["get"], detail=False, url_path="get-customers")
     def get_customers(self, request, pk=None, *args, **kwargs):
@@ -454,10 +464,24 @@ class AdminMViewset(viewsets.ViewSet):
         customer_role = Roles.objects.filter(alias=CUSTOMERS_USER_TYPE).first()
         customers = QMUser.objects.filter(profile__role_id=customer_role.id)
 
-        serializer = UsersSerializer(
-            customers, many=True, context={"request": request})
+        query_params = request.query_params.dict()
+        offset = int(query_params.pop('offset', 0))
+        end = int(query_params.pop('limit', 100))
 
-        return Response({'records': serializer.data, 'totalRecords':  customers.count()})
+        serializer = UsersSerializer(
+            customers[offset:end], many=True, context={"request": request})
+
+        resp_data = get_data_format()
+        resp_data['success'] = True
+        resp_data["status"] = 200
+        resp_data['response'] = {
+            'records': serializer.data, 'totalRecords':  customers.count()}
+        resp_data['msg'] = 'Getting the customers list...'
+
+        # Can't be refactored because of table uses same format
+        return Response(resp_data['response'])
+
+    # "Refactored"
 
     @action(methods=["get"], detail=True, url_path="get-customer")
     def get_customer(self, request, pk=None, *args, **kwargs):
@@ -470,6 +494,7 @@ class AdminMViewset(viewsets.ViewSet):
             requested_by=request.user, requested_for=customer).first()
 
         is_admin = request.user.is_superuser
+        resp_data = get_data_format()
 
         if(not is_admin):
             if(access_request):
@@ -477,21 +502,43 @@ class AdminMViewset(viewsets.ViewSet):
                 if(access_status == "has_access"):
                     print('hAS access')
                 else:
-                    return Response({}, status=status.HTTP_401_UNAUTHORIZED)
+
+                    resp_data['success'] = False
+                    resp_data["status"] = 401
+                    resp_data['msg'] = 'You do not have access to the users data'
+
+                    return Response(resp_data)
             else:
-                return Response({}, status=status.HTTP_401_UNAUTHORIZED)
+
+                resp_data['success'] = False
+                resp_data["status"] = 401
+                resp_data['msg'] = 'You do not have access to the users data'
+
+                return Response(resp_data)
+
+        resp_data['success'] = True
+        resp_data["status"] = 200
+        resp_data['msg'] = 'User Data...'
 
         serializer = UsersSerializer(
             customer, context={"request": request})
+        resp_data['response'] = {'data': serializer.data}
 
-        return Response({'data': serializer.data})
+        return Response(resp_data)
 
     @action(methods=["get"], detail=True, url_path="get-prescription")
     def get_prescription(self, request, pk=None, *args, **kwargs):
 
         prescription = get_object_or_404(Prescription, id=pk)
         data = PrescriptionSerializer(prescription).data
-        return Response({'data': data})
+
+        resp_data = get_data_format()
+        resp_data['success'] = True
+        resp_data['status'] = 200
+        resp_data['response'] = {'data': data}
+        resp_data['msg'] = 'Get Prescription By ID'
+
+        return Response(resp_data)
 
     @action(methods=["get"], detail=False, url_path="get-tables-data")
     def get_tables_data(self, request, pk=None, *args, **kwargs):
@@ -512,6 +559,7 @@ class AdminMViewset(viewsets.ViewSet):
         }
         data["msg"] = "Doctors List"
         data["status"] = 200
+        data["success"] = True
         return Response(data)
 
 
@@ -537,57 +585,77 @@ class CommonMViewset(viewsets.ViewSet):
     def delete(self, request, *args, **kwargs):
         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
+    # Refactored
     @action(methods=["get"], detail=True, url_path="get-doctor")
     def get_doctor(self, request, pk=None, *args, **kwargs):
         doctor_role = Roles.objects.filter(alias=Doctors_USER_TYPE).first()
         doctor = QMUser.objects.filter(
             profile__role_id=doctor_role.id, id=pk).first()
 
-        return Response(UsersSerializer(doctor, context={"request": request}).data)
+        resp_data = get_data_format()
+        resp_data['success'] = True
+        resp_data['status'] = 200
+        resp_data['response'] = UsersSerializer(
+            doctor, context={"request": request}).data
+        resp_data['msg'] = 'Get Doctor by column id'
 
+        return Response(resp_data)
+
+    # Refactored
     @action(methods=["get"], detail=True, url_path="get-prescription")
     def get_prescription(self, request, pk=None, *args, **kwargs):
 
         prescription = get_object_or_404(Prescription, id=pk)
 
-        if(request.user.is_superuser):
-            data = PrescriptionSerializer(prescription).data
-            return Response({'data': data})
+        resp_data = get_data_format()
+        resp_data['success'] = True
+        resp_data['status'] = 200
+        resp_data['msg'] = 'Prescription Data...'
 
-        elif (prescription.customer == request.user):
+        if(request.user.is_superuser or (prescription.customer == request.user) or ((prescription.created_by == request.user))):
             data = PrescriptionSerializer(prescription).data
-            return Response({'data': data})
+            resp_data['response'] = {'data': data}
 
-        elif (prescription.created_by == request.user):
-            data = PrescriptionSerializer(prescription).data
-            return Response({'data': data})
+            return Response(resp_data)
 
         else:
             access = get_object_or_404(
                 AccessRequest, requested_by=request.user, requested_for=prescription.customer)
 
-            if(access.status == "has_access" or request.user == prescription.customer):
+            if(access.status == "has_access"):
                 data = PrescriptionSerializer(prescription).data
                 data["doctor_name"] = "x.x.x"
 
-                return Response({'data': data})
+                resp_data['response'] = {'data': data}
 
-            return Response("No Permission", status=status.HTTP_401_UNAUTHORIZED)
+                return Response(resp_data)
 
-        return Response({})
+            resp_data['success'] = False
+            resp_data['status'] = 401
+            resp_data['msg'] = "Do not have access to user data..."
+
+            return Response(resp_data)
 
 
 class UserMViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
+    # Refactored
     @action(methods=["get"], detail=False, url_path="get-myrecords")
     def get_myrecords(self, request, *args, **kwargs):
         usr = request.user
         queryset = usr.prescription_customer_details.all()
         data = PrescriptionSerializer(queryset, many=True).data
 
-        return Response(data)
+        resp_data = get_data_format()
+        resp_data['success'] = True
+        resp_data['status'] = 200
+        resp_data['response'] = data
+        resp_data['msg'] = 'Getting Records of Prescriptions...'
 
+        return Response(resp_data)
+
+    # Cant be refactored : Table List URL
     @action(methods=["get"], detail=False, url_path="get-myrequests")
     def get_myrequests(self, request, *args, **kwargs):
 
@@ -596,8 +664,17 @@ class UserMViewSet(viewsets.ViewSet):
             requested_for=usr).order_by("-id")
         data = AccessRequestSerializer(queryset, many=True).data
 
-        return Response({"records": data, "totalRecords": queryset.count()})
+        resp_data = get_data_format()
+        resp_data['success'] = True
+        resp_data['status'] = 200
+        resp_data['response'] = {"records": data,
+                                 "totalRecords": queryset.count()}
+        resp_data['msg'] = 'Getting User Data AccessReqests Requested By Doctor For Current User...'
 
+        return Response({"records": data,
+                         "totalRecords": queryset.count()})
+
+    # Refactored
     @action(methods=["post"], detail=True, url_path="accept-request")
     def accept_request(self, request, pk=None, *args, **kwargs):
 
@@ -608,10 +685,22 @@ class UserMViewSet(viewsets.ViewSet):
             access_request.status = "has_access"
             access_request.save()
 
-            return Response({"status": "has_access"})
-        else:
-            return Response({"status": "access_denied"}, status=status.HTTP_400_BAD_REQUEST)
+            resp_data = get_data_format()
+            resp_data['success'] = True
+            resp_data['status'] = 200
+            resp_data['response'] = {"status": "has_access"}
+            resp_data['msg'] = 'msg'
 
+            return Response(resp_data)
+        else:
+            resp_data = get_data_format()
+            resp_data['success'] = False
+            resp_data['status'] = 301
+            resp_data['msg'] = 'Access Denied...'
+
+            return Response(resp_data)
+
+    # Refactored
     @action(methods=["post"], detail=True, url_path="deny-request")
     def deny_request(self, request, pk=None, *args, **kwargs):
 
@@ -622,10 +711,23 @@ class UserMViewSet(viewsets.ViewSet):
             access_request.status = "rejected"
             access_request.save()
 
-            return Response({"status": "rejected"})
-        else:
-            return Response({"status": "None"}, status=status.HTTP_400_BAD_REQUEST)
+            resp_data = get_data_format()
+            resp_data['success'] = True
+            resp_data['status'] = 200
+            resp_data['response'] = {"status": "rejected"}
+            resp_data['msg'] = 'AccessRequest Denied Successfully...'
 
+            return Response(resp_data)
+        else:
+
+            resp_data = get_data_format()
+            resp_data['success'] = False
+            resp_data['status'] = 301
+            resp_data['msg'] = 'Access Denied...'
+
+            return Response(resp_data)
+
+    # Refactored
     @action(methods=["post"], detail=True, url_path="send-review")
     def send_review(self, request, pk=None, *args, **kwargs):
 
@@ -639,19 +741,40 @@ class UserMViewSet(viewsets.ViewSet):
                             doctor=doctor, created_by=request.user)
 
             review.save()
-            return Response({'status': "submitted"})
+
+            resp_data = get_data_format()
+            resp_data['success'] = True
+            resp_data['status'] = 200
+            resp_data['response'] = {'status': "submitted"}
+            resp_data['msg'] = 'msg'
+
+            return Response(resp_data)
 
         else:
-            return Response("access denied", status=status.HTTP_401_UNAUTHORIZED)
 
+            resp_data = get_data_format()
+            resp_data['success'] = False
+            resp_data['status'] = 301
+            resp_data['msg'] = "Permission denied"
+
+            return Response(resp_data, status=status.HTTP_401_UNAUTHORIZED)
+
+    # Refactored
     @action(methods=["get"], detail=True, url_path="doctor-name")
     def get_doctor_name(self, request, pk=None, *args, **kwargs):
 
         doctor = get_object_or_404(QMUser, pk=pk)
 
-        return Response(doctor.first_name + ' ' + doctor.last_name)
+        resp_data = get_data_format()
+        resp_data['success'] = True
+        resp_data['status'] = 200
+        resp_data['response'] = doctor.first_name + ' ' + doctor.last_name
+        resp_data['msg'] = 'Doctor Name...'
 
-       # Tags Mechanism
+        return Response(resp_data)
+
+       # Tags Mechanism]
+    # Refactored
     @action(methods=["get"], detail=False, url_path="get-tags")
     def get_tags(self, request, pk=None, *args, **kwargs):
 
@@ -664,10 +787,16 @@ class UserMViewSet(viewsets.ViewSet):
 
         data = getTags()
 
-        return Response(data, status=status.HTTP_200_OK)
+        resp_data = get_data_format()
+        resp_data['success'] = True
+        resp_data['status'] = 200
+        resp_data['response'] = data
+        resp_data['msg'] = 'Get All The Tags Available Globally...'
 
-       # Tags Mechanism
+        return Response(resp_data, status=status.HTTP_200_OK)
 
+    # Tags Mechanism
+    # Refactored
     @action(methods=["post"], detail=False, url_path="filter-doctors")
     def filterDoctors(self, request, pk=None, *args, **kwargs):
 
@@ -683,34 +812,56 @@ class UserMViewSet(viewsets.ViewSet):
             except Exception as e:
                 print(e)
 
-        doctors = set()
-        for tag_obj in tags_list:
-            tag_doctors = tag_obj.doctors.all()
-            tag_doctors = [
-                doctor_profile.user for doctor_profile in tag_doctors]
+        if(len(tags_list) == 0):
+            doctor_role = Roles.objects.filter(alias=Doctors_USER_TYPE).first()
+            doctors = QMUser.objects.filter(profile__role_id=doctor_role.id)
+        else:
+            doctors = set()
+            for tag_obj in tags_list:
+                tag_doctors = tag_obj.doctors.all()
+                tag_doctors = [
+                    doctor_profile.user for doctor_profile in tag_doctors]
 
-            doctors = set(doctors) | set(tag_doctors)
+                # Just adds the doctos without duplicating one
+                doctors = set(doctors) | set(tag_doctors)
 
-        resp_data = UserSerializerReadOnly(list(doctors), many=True).data
+        doctors_data = UserSerializerReadOnly(list(doctors), many=True).data
 
-        return Response({"data": resp_data}, status=status.HTTP_200_OK)
+        resp_data = get_data_format()
+        resp_data['success'] = True
+        resp_data['status'] = 200
+        resp_data['response'] = {"data": doctors_data}
+        resp_data['msg'] = 'Get Filtered Doctors By Tags'
+
+        return Response(resp_data, status=status.HTTP_200_OK)
 
     # AppoitmentMechanism
+    # Refactored
     @action(methods=["get"], detail=True, url_path="get-timeslots-daywise")
     def getTimeslotsDaywise(self, request, pk=None, *args, **kwargs):
         user = get_object_or_404(QMUser, pk=pk)
         day = request.GET.get("day", None)
 
         if(day == None or day == ""):
+            resp_data = get_data_format()
+            resp_data['success'] = False
+            resp_data['status'] = 304
+            resp_data['msg'] = 'Please Provide Valid Input To API.'
 
-            return Response({"msg": "No Day Selected"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(resp_data)
 
         timeslots = TimeSlot.objects.filter(doctor=user, day=day.lower())
-
         timeslosts_data = TimeSlotSerializer(timeslots, many=True).data
 
-        return Response({"timeslots": timeslosts_data}, status=status.HTTP_200_OK)
+        resp_data = get_data_format()
+        resp_data['success'] = True
+        resp_data['status'] = 200
+        resp_data['response'] = {"timeslots": timeslosts_data}
+        resp_data['msg'] = 'Loading Timeslots For Day.'
 
+        return Response(resp_data, status=status.HTTP_200_OK)
+
+    # Refactored
     @action(methods=['GET'], detail=True, url_path="get-timeslots-datewise")
     def getTimeslotsDatewise(self, request, pk):
 
@@ -738,8 +889,13 @@ class UserMViewSet(viewsets.ViewSet):
                 If Date is not provided it will return just unique dates...
                 Those dates are the key to timeslots
             """
+            resp_data = get_data_format()
+            resp_data['success'] = True
+            resp_data['status'] = 200
+            resp_data['response'] = {"dates": uniqueDates}
+            resp_data['msg'] = 'Load Dates Available For Appointments.'
 
-            return Response({"dates": uniqueDates}, status=status.HTTP_200_OK)
+            return Response(resp_data, status=status.HTTP_200_OK)
 
         else:
             timeslots = DateTimeSlot.objects.filter(
@@ -748,7 +904,13 @@ class UserMViewSet(viewsets.ViewSet):
             datetimeslots = DateTimeSlotSerializer(
                 timeslots, many=True).data
 
-            return Response({"timeslots": datetimeslots}, status=status.HTTP_200_OK)
+            resp_data = get_data_format()
+            resp_data['success'] = True
+            resp_data['status'] = 200
+            resp_data['response'] = {"timeslots": datetimeslots}
+            resp_data['msg'] = 'Loading The Timeslots for Date.'
+
+            return Response(resp_data, status=status.HTTP_200_OK)
 
     # Dashboard Tables
     @action(methods=['GET'], detail=False, url_path="get-dashboard-table")

@@ -75,8 +75,15 @@ const PatientPrescDetail = (props) => {
   const getPrescriptionData = () => {
     const url = `${BASE_URL}api/common_m/${presc_id}/get-prescription/`;
     axios.get(url).then((resp) => {
-      setPrescriptionData(resp.data.data);
-      getMedicinesList();
+      const resp_data = resp.data;
+      if (resp_data.success) {
+        const prescription_data = resp_data.response.data;
+        setPrescriptionData(prescription_data);
+        getMedicinesList();
+      } else {
+        const error_msg = resp_data.msg;
+        toast.error(error_msg);
+      }
     });
   };
 

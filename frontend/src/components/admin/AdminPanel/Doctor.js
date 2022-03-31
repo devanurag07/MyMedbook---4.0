@@ -62,8 +62,15 @@ const Doctor = (props) => {
   const getDoctorInfo = () => {
     const url_path = `${BASE_URL}api/admin_m/${props.match.params.id}/get-doctor/`;
     axios.get(url_path).then((resp) => {
-      setDoctorData(resp.data);
-      console.log(resp.data);
+      const resp_data=resp.data;
+      if(resp_data.success){
+        const doctor_data=resp_data.response;
+        setDoctorData(doctor_data);
+      }else{
+        const error_msg=resp_data.msg;
+        toast.error(error_msg)
+      }
+      
     });
   };
 

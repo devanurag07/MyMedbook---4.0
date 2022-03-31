@@ -82,8 +82,13 @@ const SelectDoctor = () => {
     getCall(BASE_URL + "api/userpanel/get-tags")
       .then((resp) => {
         if (resp.status === 200) {
-          let data = resp.data;
-          setTags(data.tags);
+          const resp_data = resp.data;
+          if (resp_data.success) {
+            const data = resp_data.response;
+            setTags(data.tags);
+          } else {
+            ///No Errors Specified
+          }
         }
       })
       .catch((err) => {
@@ -96,15 +101,13 @@ const SelectDoctor = () => {
       tags: selectedTags,
     })
       .then((resp) => {
-        if (resp.status === 200) {
-          let data = resp.data;
-          if (data) {
-            const doctors = data.data;
-            if (doctors) {
-              setDoctors(doctors);
-              console.log(doctors);
-            }
-          }
+        const resp_data = resp.data;
+        if (resp_data.success) {
+          const doctors = resp_data.response.data;
+
+          setDoctors(doctors);
+        } else {
+          // No Errors Specified
         }
       })
       .catch((err) => {

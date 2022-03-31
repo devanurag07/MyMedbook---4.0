@@ -5,6 +5,7 @@ import axios from "axios";
 import { BASE_URL } from "../../../helpers/constants";
 import { makeStyles } from "@material-ui/styles";
 import { useTheme } from "@mui/material/styles";
+import { toast } from "react-toastify";
 
 const MyRecords = () => {
   const [records, setRecords] = useState([]);
@@ -12,7 +13,14 @@ const MyRecords = () => {
   const getPatientData = () => {
     const url = `${BASE_URL}api/userpanel/get-myrecords/`;
     axios.get(url).then((resp) => {
-      setRecords(resp.data);
+      const resp_data = resp.data;
+      if (resp_data.success) {
+        const records = resp_data.response;
+        setRecords(records);
+      } else {
+        const error_msg = resp_data.msg;
+        toast.error(error_msg);
+      }
     });
   };
 

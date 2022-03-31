@@ -5,6 +5,7 @@ import axios from "axios";
 import { Link } from "react-router-dom";
 import { BASE_URL } from "../../../helpers/constants";
 import { makeStyles } from "@material-ui/styles";
+import { toast } from "react-toastify";
 const useStyles = makeStyles((theme) => ({
   root: {
     "& .subheading": {
@@ -30,8 +31,14 @@ const PatientDetails = (props) => {
     axios
       .get(url)
       .then((resp) => {
-        setPatientData(resp.data.data);
-        console.log(resp.data);
+        const resp_data = resp.data;
+        if (resp_data.success) {
+          const patient_data = resp_data.response.data;
+          setPatientData(patient_data);
+        } else {
+          const error_msg = resp_data.msg;
+          toast.error(error_msg);
+        }
       })
       .catch((err) => {
         if (err.response.status == 401) {

@@ -3,14 +3,22 @@ import React, { useState, useEffect, useRef } from "react";
 import { BASE_URL } from "../../../helpers/constants";
 import MyRecords, { PrevRecordItem } from "./MyRecords";
 import SmartTable from "../../../ui/smart-table";
+import { toast } from "react-toastify";
+
 const Home = (props) => {
   const [records, setRecords] = useState([]);
 
   const getPatientData = () => {
     const url = `${BASE_URL}api/userpanel/get-myrecords/`;
     axios.get(url).then((resp) => {
-      setRecords(resp.data);
-      console.log(resp.data);
+      const resp_data = resp.data;
+      if (resp_data.success) {
+        const records = resp_data.response;
+        setRecords(records);
+      } else {
+        const error_msg = resp_data.msg;
+        toast.error(error_msg);
+      }
     });
   };
 
@@ -41,7 +49,6 @@ const Home = (props) => {
           smartTable.fetchRecords(0, recordPerPage);
         });
     } else if (param.label == "Review") {
-      console.log(param);
       props.history.push(`/app/review/${param.rowData.doctor_id}`);
     }
     // Report Review Action

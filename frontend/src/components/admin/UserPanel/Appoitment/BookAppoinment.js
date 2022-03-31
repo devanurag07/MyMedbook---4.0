@@ -115,7 +115,7 @@ const BookAppoinment = () => {
   const { doctor_id } = useParams();
 
   const classes = useStyles();
-  const [dayWise, setDayWise] = useState(false);
+  const [dayWise, setDayWise] = useState(true);
   const [dates, setDates] = useState([]);
 
   // TimeSlot Nav
@@ -141,7 +141,7 @@ const BookAppoinment = () => {
   ];
 
   // TimeSlot Nav
-  const [selectedDay, setSelectedDay] = useState("");
+  const [selectedDay, setSelectedDay] = useState("monday");
   const [selectedTimeslot, setSelectedTimeslot] = useState({});
   const [doctorData, setDoctorData] = useState({ tags: [] });
 
@@ -154,8 +154,14 @@ const BookAppoinment = () => {
     getCall(BASE_URL + `api/common_m/${doctor_id}/get-doctor/`).then((resp) => {
       if (resp.status == 200) {
         if (resp.data) {
-          const doctorData = resp.data;
-          setDoctorData(doctorData);
+          const resp_data = resp.data;
+          if (resp_data.success) {
+            const doctor_data = resp_data.response;
+            setDoctorData(doctor_data);
+          } else {
+            const error_msg = resp_data.msg;
+            toast.error(error_msg);
+          }
         }
       }
     });
@@ -169,10 +175,17 @@ const BookAppoinment = () => {
     }).then((resp) => {
       if (resp.status == 200) {
         if (resp.data) {
-          let timeslots = resp.data.timeslots;
-          timeslots = timeslots ? timeslots : [];
-          setTimeSlots(timeslots);
-          console.log(timeslots);
+          const resp_data = resp.data;
+          if (resp_data.success) {
+            const data = resp_data.response;
+            let timeslots = data.timeslots;
+
+            timeslots = timeslots ? timeslots : [];
+            setTimeSlots(timeslots);
+          } else {
+            const error_msg = resp_data.msg;
+            toast.error(error_msg);
+          }
         }
       }
     });
@@ -184,8 +197,14 @@ const BookAppoinment = () => {
     ).then((resp) => {
       if (resp.status == 200) {
         if (resp.data) {
-          const dates = resp.data.dates;
-          setDates(dates);
+          const resp_data = resp.data;
+          if (resp_data.success) {
+            const dates = resp_data.response.dates;
+            setDates(dates);
+          } else {
+            const error_msg = resp_data.msg;
+            toast.error(error_msg);
+          }
         }
       }
     });
@@ -197,11 +216,15 @@ const BookAppoinment = () => {
         date: selectedDate,
       },
     }).then((resp) => {
-      if (resp.status == 200) {
-        if (resp.data) {
-          let timeslots = resp.data.timeslots;
+      if (resp.data) {
+        const resp_data = resp.data;
+        if (resp_data.success) {
+          let timeslots = resp_data.response.timeslots;
           timeslots = timeslots ? timeslots : [];
           setDateTimeslots(timeslots);
+        } else {
+          const error_msg = resp_data.msg;
+          toast.error(error_msg);
         }
       }
     });
@@ -436,6 +459,26 @@ const BookAppoinment = () => {
                           </div>
                         );
                       })}
+
+                      {dates.length == 0 && (
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "center",
+                            width: "100%",
+                          }}
+                        >
+                          <h6
+                            style={{
+                              textAlign: "center",
+                              width: "100%",
+                              color: "red",
+                            }}
+                          >
+                            No Dates For Timeslots
+                          </h6>
+                        </div>
+                      )}
                     </div>
 
                     <div
@@ -544,6 +587,26 @@ const BookAppoinment = () => {
                         </div>
                       );
                     })}
+
+                    {timeslots.length == 0 && (
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "center",
+                          width: "100%",
+                        }}
+                      >
+                        <h6
+                          style={{
+                            textAlign: "center",
+                            width: "100%",
+                            color: "red",
+                          }}
+                        >
+                          No Timeslots
+                        </h6>
+                      </div>
+                    )}
                   </div>
                 </Paper>
               </div>

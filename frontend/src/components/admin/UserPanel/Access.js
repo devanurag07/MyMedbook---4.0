@@ -2,6 +2,7 @@ import React, { useRef, useState } from "react";
 import SmartTable from "../../../ui/smart-table";
 import axios from "axios";
 import { BASE_URL } from "../../../helpers/constants";
+import { toast } from "react-toastify";
 
 const Access = (props) => {
   const recordPerPage = 15;
@@ -19,15 +20,30 @@ const Access = (props) => {
         .post(BASE_URL + `api/userpanel/${requestId}/accept-request/`)
         .then((resp) => {
           smartTable.fetchRecords(0, recordPerPage);
+          const resp_data = resp.data;
+
+          if (resp_data.success) {
+            toast.success("Request Approved");
+          } else {
+            const error_msg = resp_data.msg;
+            toast.error(error_msg);
+          }
         });
     } else if (param.label === "Delete") {
       axios
         .post(BASE_URL + `api/userpanel/${requestId}/deny-request/`)
         .then((resp) => {
           smartTable.fetchRecords(0, recordPerPage);
+
+          const resp_data = resp.data;
+          if (resp_data.success) {
+            toast.error("Request Rejected !");
+          } else {
+            const error_msg = resp_data.msg;
+            toast.error(error_msg);
+          }
         });
     } else if (param.label == "Review") {
-      console.log(param);
       props.history.push(`/app/review/${param.rowData.doctor_id}`);
     }
     // Report Review Action
